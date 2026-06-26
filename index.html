@@ -8,8 +8,15 @@
 <link rel="stylesheet" crossorigin href="./assets/index-EnTVghi1.css">
   </head>
   <body>
-   <div id="root"></div>
-<button onclick="alert('تم الإرسال')">إرسال</button>
+    <div id="root"></div>
+    <!-- مربع إدخال رقم الغرفة -->
+    <input type="text" id="code-input" placeholder="ادخل رقم الغرفة" style="width: 100%; padding: 10px; margin-top: 10px;">
+    <!-- زرار الإرسال -->
+    <button style="width: 100%; padding: 15px; margin-top: 10px;" onclick="alert('تم إرسال الكود: ' + document.getElementById('code-input').value)">إرسال</button>
+    <!-- زرار اختيار الملفات -->
+    <input type="file" id="filePicker" style="display:none">
+    <button style="width: 100%; padding: 15px; margin-top: 10px;" onclick="document.getElementById('filePicker').click()">اختيار ملف من الجهاز</button>
   </body>
+  
 </html>
 
