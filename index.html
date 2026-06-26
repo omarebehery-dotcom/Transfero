@@ -7,16 +7,21 @@
    <script type="module" crossorigin src="./assets/index-BauKE48E.js"></script>
 <link rel="stylesheet" crossorigin href="./assets/index-EnTVghi1.css">
   </head>
-  <body>
-    <div id="root"></div>
-    <!-- مربع إدخال رقم الغرفة -->
-    <input type="text" id="code-input" placeholder="ادخل رقم الغرفة" style="width: 100%; padding: 10px; margin-top: 10px;">
-    <!-- زرار الإرسال -->
-    <button style="width: 100%; padding: 15px; margin-top: 10px;" onclick="alert('تم إرسال الكود: ' + document.getElementById('code-input').value)">إرسال</button>
-    <!-- زرار اختيار الملفات -->
-    <input type="file" id="filePicker" style="display:none">
-    <button style="width: 100%; padding: 15px; margin-top: 10px;" onclick="document.getElementById('filePicker').click()">اختيار ملف من الجهاز</button>
-  </body>
-  
+  <body style="background-color: #121212; color: white;">
+  <div id="root"></div>
+
+  <!-- مربع الكود باللون الداكن -->
+  <input type="text" id="code-input" placeholder="ادخل رقم الغرفة" 
+    style="width: 100%; padding: 15px; margin-top: 10px; background-color: #1e1e1e; color: white; border: 1px solid #333; border-radius: 8px;">
+
+  <!-- زرار الإرسال -->
+  <button style="width: 100%; padding: 15px; margin-top: 10px; background-color: #007bff; color: white; border: none; border-radius: 8px;" 
+    onclick="alert('جاري إرسال الكود: ' + document.getElementById('code-input').value)">إرسال الكود</button>
+
+  <!-- زرار اختيار الملفات -->
+  <input type="file" id="filePicker" style="display:none">
+  <button style="width: 100%; padding: 15px; margin-top: 10px; background-color: #444; color: white; border: none; border-radius: 8px;" 
+    onclick="document.getElementById('filePicker').click()">اختر ملفاً للإرسال</button>
+</body>
 </html>
 
