@@ -1,170 +1,224 @@
-
+```html
 <!DOCTYPE html>
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/instascan/1.0.0/instascan.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
-*{
+body{
     margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Tahoma,sans-serif;
+    background:#0f172a;
+    color:white;
+    font-family:Tahoma;
 }
 
-body{
-    background:linear-gradient(135deg,#0f172a,#1e293b);
-    color:white;
-    text-align:center;
-    min-height:100vh;
+.page{
+    display:none;
+    height:100vh;
     padding:20px;
+    text-align:center;
+}
+
+.active{
+    display:block;
 }
 
 h1{
-    margin-top:30px;
-    margin-bottom:40px;
-    font-size:35px;
-}
-
-.card{
-    background:rgba(255,255,255,.08);
-    padding:25px;
-    border-radius:25px;
-    max-width:420px;
-    margin:auto;
-    backdrop-filter:blur(10px);
+    margin-top:60px;
 }
 
 .btn{
-    width:100%;
-    padding:16px;
+    width:90%;
+    max-width:350px;
+    padding:18px;
     border:none;
-    border-radius:18px;
-    margin-top:15px;
+    border-radius:20px;
     color:white;
-    font-size:18px;
-    cursor:pointer;
-    transition:.3s;
-    font-weight:bold;
+    font-size:20px;
+    margin:15px auto;
+    display:block;
 }
 
-.btn:hover{
-    transform:scale(1.03);
-}
-
-.send{
+.sendBtn{
     background:#2563eb;
 }
 
-.receive{
+.receiveBtn{
     background:#16a34a;
 }
 
-.scan{
-    background:#f59e0b;
-}
-
-.files{
-    background:#9333ea;
+.backBtn{
+    background:#374151;
 }
 
 input{
-    width:100%;
+    width:90%;
+    max-width:350px;
     padding:15px;
     border:none;
     border-radius:15px;
-    text-align:center;
     font-size:18px;
-    margin-top:15px;
+    text-align:center;
+    margin-top:20px;
 }
 
 #camera{
-    width:100%;
+    width:90%;
     max-width:350px;
-    margin:20px auto;
     border-radius:20px;
-    display:none;
+    margin-top:20px;
 }
 
 #qr{
+    width:230px;
+    height:230px;
     background:white;
-    width:220px;
-    height:220px;
-    margin:20px auto;
+    margin:30px auto;
     border-radius:20px;
-    display:none;
     padding:10px;
 }
 
 #roomCode{
     font-size:30px;
     font-weight:bold;
-    margin-top:20px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Transfero</h1>
+<!-- الصفحة الرئيسية -->
+<div id="home" class="page active">
+    <h1>Transfero</h1>
 
-<div class="card">
+    <button class="btn sendBtn"
+    onclick="openSend()">
+        📤 SEND
+    </button>
 
-<input id="roomInput" placeholder="اكتب رمز الغرفة">
+    <button class="btn receiveBtn"
+    onclick="openReceive()">
+        📥 RECEIVE
+    </button>
+</div>
 
-<button class="btn send" onclick="connectRoom()">
-📤 SEND
-</button>
+<!-- صفحة الإرسال -->
+<div id="sendPage" class="page">
 
-<button class="btn scan" onclick="startScanner()">
-📷 Scan QR
-</button>
+    <h1>Send Files</h1>
 
-<button class="btn receive" onclick="createRoom()">
-📥 RECEIVE
-</button>
+    <video id="camera" playsinline></video>
 
-<button class="btn files" onclick="pickFiles()">
-📁 اختيار ملفات
-</button>
+    <input id="roomInput"
+    placeholder="اكتب رمز الغرفة">
 
-<input type="file" id="fileInput" multiple hidden>
+    <button class="btn sendBtn"
+    onclick="connectRoom()">
+        اتصال
+    </button>
 
-<div id="roomCode"></div>
+    <button class="btn backBtn"
+    onclick="goHome()">
+        رجوع
+    </button>
 
-<video id="camera" playsinline></video>
+</div>
 
-<div id="qr"></div>
+<!-- صفحة الاستقبال -->
+<div id="receivePage" class="page">
+
+    <h1>Receive Files</h1>
+
+    <div id="roomCode"></div>
+
+    <div id="qr"></div>
+
+    <button class="btn backBtn"
+    onclick="goHome()">
+        رجوع
+    </button>
 
 </div>
 
 <script>
-let scanner = null;
+let scanner;
 
-function connectRoom(){
-    let code =
-        document.getElementById("roomInput").value;
+function hideAll(){
+    document.querySelectorAll(".page")
+    .forEach(p=>p.classList.remove("active"));
+}
 
-    if(code===""){
-        alert("اكتب رمز الغرفة");
-        return;
-    }
+function goHome(){
+    hideAll();
+    document.getElementById("home")
+    .classList.add("active");
 
-    alert("تم الاتصال بالغرفة: " + code);
-
-    if(window.AppInventor){
-        window.AppInventor
-        .setWebViewString("CONNECT:"+code);
+    if(scanner){
+        scanner.stop();
     }
 }
 
-function createRoom(){
+function openSend(){
+    hideAll();
 
-    stopScanner();
+    document.getElementById("sendPage")
+    .classList.add("active");
+
+    startCamera();
+}
+
+function openReceive(){
+    hideAll();
+
+    document.getElementById("receivePage")
+    .classList.add("active");
+
+    createRoom();
+}
+
+function startCamera(){
+
+    let video =
+        document.getElementById("camera");
+
+    scanner =
+        new Instascan.Scanner({
+            video:video,
+            mirror:false
+        });
+
+    scanner.addListener(
+        "scan",
+        function(content){
+
+            document.getElementById(
+                "roomInput"
+            ).value = content;
+
+            if(window.AppInventor){
+                window.AppInventor
+                .setWebViewString(
+                    "SCAN:"+content
+                );
+            }
+        }
+    );
+
+    Instascan.Camera.getCameras()
+    .then(function(cameras){
+
+        if(cameras.length>0){
+            scanner.start(
+                cameras[cameras.length-1]
+            );
+        }
+    });
+}
+
+function createRoom(){
 
     let code =
         Math.floor(
@@ -172,15 +226,15 @@ function createRoom(){
             Math.random()*900000
         );
 
-    document.getElementById("roomCode")
-        .innerHTML =
-        "Room Code : " + code;
+    document.getElementById(
+        "roomCode"
+    ).innerHTML =
+    "Room Code<br>"+code;
 
     let qr =
         document.getElementById("qr");
 
     qr.innerHTML = "";
-    qr.style.display = "block";
 
     new QRCode(qr,{
         text:String(code),
@@ -190,119 +244,29 @@ function createRoom(){
 
     if(window.AppInventor){
         window.AppInventor
-        .setWebViewString("ROOM:"+code);
-    }
-}
-
-function startScanner(){
-
-    document.getElementById("qr")
-        .style.display = "none";
-
-    let video =
-        document.getElementById("camera");
-
-    video.style.display = "block";
-
-    if(!scanner){
-
-        scanner =
-            new Instascan.Scanner({
-                video:video,
-                mirror:false
-            });
-
-        scanner.addListener(
-            'scan',
-            function(content){
-
-                document.getElementById(
-                    "roomInput"
-                ).value = content;
-
-                alert(
-                    "تم مسح الكود: "
-                    + content
-                );
-
-                stopScanner();
-
-                if(window.AppInventor){
-                    window.AppInventor
-                    .setWebViewString(
-                        "SCAN:"+content
-                    );
-                }
-            }
+        .setWebViewString(
+            "ROOM:"+code
         );
     }
-
-    Instascan.Camera.getCameras()
-        .then(function(cameras){
-
-            if(cameras.length>0){
-                scanner.start(
-                    cameras[cameras.length-1]
-                );
-            }else{
-                alert(
-                    "لا توجد كاميرا"
-                );
-            }
-        });
 }
 
-function stopScanner(){
-    if(scanner){
-        scanner.stop();
-    }
+function connectRoom(){
 
-    document.getElementById(
-        "camera"
-    ).style.display="none";
-}
+    let code =
+        document.getElementById(
+            "roomInput"
+        ).value;
 
-function pickFiles(){
-    document.getElementById(
-        "fileInput"
-    ).click();
-}
-
-document.getElementById(
-    "fileInput"
-).addEventListener(
-    "change",
-    function(){
-
-        let files = this.files;
-
-        if(files.length===0)
-            return;
-
-        let names = [];
-
-        for(let i=0;i<files.length;i++){
-            names.push(
-                files[i].name
-            );
-        }
-
-        alert(
-            "تم اختيار:\n"+
-            names.join("\n")
+    if(window.AppInventor){
+        window.AppInventor
+        .setWebViewString(
+            "CONNECT:"+code
         );
-
-        if(window.AppInventor){
-            window.AppInventor
-            .setWebViewString(
-                "FILES:"+
-                names.join("|")
-            );
-        }
     }
-);
+}
 </script>
 
 </body>
 </html>
 ```
+
