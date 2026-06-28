@@ -1,102 +1,121 @@
 <!DOCTYPE html>
-
 <html lang="ar">
-
 <head>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
-
-<style>
-
-body { background: #000; color: #fff; text-align: center; font-family: sans-serif; padding: 20px; }
-
-.input-group { margin: 20px 0; }
-
-input { padding: 15px; width: 80%; border-radius: 10px; border: none; text-align: center; font-size: 18px; }
-
-.btn { width: 90%; padding: 15px; margin: 10px; border-radius: 15px; border: none; font-size: 18px; cursor: pointer; }
-
-#camera-area { width: 100%; height: 250px; display: none; border-radius: 10px; }
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/instascan/1.0.0/instascan.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        body { background: #000; color: #fff; text-align: center; font-family: sans-serif; padding: 20px; direction: rtl; }
+        .input-group { margin: 20px 0; }
+        input { padding: 15px; width: 80%; border-radius: 10px; border: none; text-align: center; font-size: 18px; margin-bottom: 10px; }
+        .btn { width: 90%; padding: 15px; margin: 10px auto; border-radius: 15px; border: none; font-size: 18px; cursor: pointer; display: block; color: white; font-weight: bold; }
+        #camera-area { width: 100%; max-width: 350px; height: 250px; display: none; border-radius: 10px; margin: 15px auto; background: #222; }
+        #qr-display { margin: 20px auto; padding: 10px; background: #fff; width: 200px; height: 200px; display: none; border-radius: 10px; }
+        #qr-display img { margin: 0 auto; }
+    </style>
 </head>
-
 <body>
 
+    <div class="input-group">
+        <input type="number" id="roomInput" placeholder="أدخل رمز الغرفة">
+        <button class="btn" style="background:#007bff" onclick="connectToRoom()">اتصل بالغرفة</button>
+        <button class="btn" style="background:#ff9800" onclick="startScanner()">أو امسح QR</button>
+    </div>
 
+    <button class="btn" style="background:#28a745" onclick="showMyQR()">إنشاء غرفة جديدة (RECEIVE)</button>
 
-<div class="input-group">
+    <video id="camera-area" playsinline></video>
+    <div id="qr-display"></div>
 
-<input type="text" id="roomInput" placeholder="أدخل رمز الغرفة">
+    <script>
+        let scanner = null; // متغير لحفظ حالة الكاميرا لإغلاقها لاحقاً
 
-<button class="btn" style="background:#007bff" onclick="connectToRoom()">اتصل بالغرفة</button>
+        // 1. الاتصال برقم الغرفة المكتوب
+        function connectToRoom() {
+            let code = document.getElementById('roomInput').value;
+            if(code) {
+                if(window.AppInventor) {
+                    window.AppInventor.setWebViewString("CONNECT:" + code);
+                } else {
+                    console.log("CONNECT:" + code);
+                }
+            } else {
+                alert("من فضلك اكتب الرمز أولاً");
+            }
+        }
 
-<button class="btn" style="background:#ff9800" onclick="startScanner()">أو امسح QR</button>
+        // 2. تشغيل الكاميرا للمسح
+        function startScanner() {
+            // إخفاء الـ QR إذا كان معروضاً
+            document.getElementById('qr-display').style.display = 'none';
+            
+            let videoElement = document.getElementById('camera-area');
+            videoElement.style.display = 'block';
 
-</div>
+            if (!scanner) {
+                scanner = new Instascan.Scanner({ video: videoElement, mirror: false });
+                
+                scanner.addListener('scan', function(content) {
+                    if(window.AppInventor) {
+                        window.AppInventor.setWebViewString("SCAN:" + content);
+                    } else {
+                        alert("تم مسح الرمز: " + content);
+                    }
+                    stopScanner(); // إيقاف الكاميرا فوراً بعد المسح بنجاح
+                });
+            }
 
+            Instascan.Camera.getCameras().then(cameras => {
+                if (cameras.length > 0) {
+                    // محاولة استخدام الكاميرا الخلفية (غالباً تكون الأخيرة في القائمة)
+                    let backCamera = cameras[cameras.length - 1];
+                    scanner.start(backCamera);
+                } else {
+                    alert("لم يتم العثور على كاميرات في الجهاز");
+                }
+            }).catch(e => {
+                alert("خطأ في الوصول للكاميرا: " + e);
+            });
+        }
 
+        // دالة لإيقاف الكاميرا وإخفائها
+        function stopScanner() {
+            if (scanner) {
+                scanner.stop();
+                document.getElementById('camera-area').style.display = 'none';
+            }
+        }
 
-<button class="btn" style="background:#28a745" onclick="showMyQR()">إنشاء غرفة جديدة (RECEIVE)</button>
+        // 3. توليد QR للغرفة وعرضه على الشاشة
+        function showMyQR() {
+            // إيقاف الكاميرا إذا كانت تعمل
+            stopScanner();
 
+            let code = Math.floor(1000 + Math.random() * 9000);
+            
+            // إرسال الكود لـ App Inventor
+            if(window.AppInventor) {
+                window.AppInventor.setWebViewString("ROOM:" + code);
+            }
 
+            // تفريغ المكان القديم للـ QR وتوليد واحد جديد
+            let qrContainer = document.getElementById('qr-display');
+            qrContainer.innerHTML = "";
+            qrContainer.style.display = 'block';
 
-<video id="camera-area"></video>
+            new QRCode(qrContainer, {
+                text: String(code),
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
 
-<div id="qr-display"></div>
-
-
-
-<script>
-
-// الاتصال برقم الغرفة المكتوب
-
-function connectToRoom() {
-
-let code = document.getElementById('roomInput').value;
-
-if(code) window.AppInventor.setWebViewString("CONNECT:" + code);
-
-else alert("من فضلك اكتب الرمز أولاً");
-
-}
-
-
-
-// تشغيل الكاميرا للمسح
-
-function startScanner() {
-
-document.getElementById('camera-area').style.display = 'block';
-
-let s = new Instascan.Scanner({ video: document.getElementById('camera-area') });
-
-s.addListener('scan', c => window.AppInventor.setWebViewString("SCAN:" + c));
-
-Instascan.Camera.getCameras().then(c => { if(c.length>0) s.start(c[0]); });
-
-}
-
-
-
-// توليد QR للغرفة
-
-function showMyQR() {
-
-let code = Math.floor(1000 + Math.random() * 9000);
-
-window.AppInventor.setWebViewString("ROOM:" + code);
-
-alert("كود غرفتك هو: " + code);
-
-}
-
-</script>
-
+            alert("كود غرفتك المشفر هو: " + code);
+        }
+    </script>
 </body>
-
-</html> 
-
+</html>
