@@ -1,68 +1,66 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="ar">
 <head>
-
-<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner for Kodular</title>
+    <script src="https://cdn.jsdelivr.net/gh/schmich/instascan-builds@master/instascan.min.js"></script>
+    <style>
+        /* تحسينات بسيطة للمظهر ليناسب شاشات الهواتف */
+        body { text-align: center; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        video { width: 100%; max-width: 400px; border-radius: 8px; background-color: #000; }
+        button { margin-top: 10px; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; }
+        #progressContainer { margin-top: 15px; }
+        progress { width: 80%; height: 20px; }
+    </style>
 </head>
-
 <body>
 
-<video id="preview"></video>
+    <video id="preview" autoplay playsinline></video>
+    <br>
+    <button onclick="sendData()">Send</button>
+    
+    <div id="progressContainer" style="display:none;">
+        <progress id="progressBar" value="0" max="100"></progress>
+        <span id="status">0%</span>
+    </div>
 
-<button onclick="sendData()">Send</button>
+    <script>
+        let scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
+        
+        scanner.addListener('scan', function (content) {
+            // التحقق من أن التطبيق يدعم WebViewString لتجنب الأخطاء أثناء التجربة على المتصفح
+            if (window.AppInventor && window.AppInventor.setWebViewString) {
+                window.AppInventor.setWebViewString("SCAN:" + content);
+            } else {
+                console.log("Scan Result: " + content);
+            }
+        });
 
+        Instascan.Camera.getCameras().then(cameras => {
+            if (cameras.length > 0) {
+                // محاولة اختيار الكاميرا الخلفية إذا وجدت، وإلا يتم اختيار أول كاميرا متاحة
+                let backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back'));
+                scanner.start(backCamera || cameras[0]);
+            } else {
+                console.error('No cameras found.');
+            }
+        }).catch(e => console.error(e));
 
-<div id="progressContainer" style="display:none;">
+        function sendData() {
+            if (window.AppInventor && window.AppInventor.setWebViewString) {
+                window.AppInventor.setWebViewString("SEND");
+            } else {
+                console.log("Send button clicked");
+            }
+        }
 
-<progress id="progressBar" value="0" max="100"></progress>
-
-<span id="status">0%</span>
-
-</div>
-
-
-
-<script>
-
-let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
-
-scanner.addListener('scan', function (content) {
-
-window.AppInventor.setWebViewString("SCAN:" + content);
-
-});
-
-Instascan.Camera.getCameras().then(c => scanner.start(c[0]));
-
-
-
-function sendData() {
-
-window.AppInventor.setWebViewString("SEND");
-
-}
-
-
-
-// دالة يستدعيها كودولار لتحديث شريط التحميل
-
-function updateProgress(val) {
-
-document.getElementById('progressContainer').style.display = "block";
-
-document.getElementById('progressBar').value = val;
-
-document.getElementById('status').innerText = val + "%";
-
-}
-
-</script>
-
+        // الدالة التي يتم استدعاؤها من Kodular لتحديث شريط التحميل
+        function updateProgress(val) {
+            document.getElementById('progressContainer').style.display = "block";
+            document.getElementById('progressBar').value = val;
+            document.getElementById('status').innerText = val + "%";
+        }
+    </script>
 </body>
-
-</html> 
-
-
+</html>
