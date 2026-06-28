@@ -1,136 +1,68 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:nearby_connections/nearby_connections.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
+<!DOCTYPE html>
 
-void main() => runApp(const MaterialApp(home: HomePage(), debugShowCheckedModeBanner: false));
+<html>
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+<head>
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("ShareIt Clone")),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SendPage())),
-              child: const Text("SEND (إرسال)"),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceivePage())),
-              child: const Text("RECEIVE (استلام)"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+
+</head>
+
+<body>
+
+<video id="preview"></video>
+
+<button onclick="sendData()">Send</button>
+
+
+<div id="progressContainer" style="display:none;">
+
+<progress id="progressBar" value="0" max="100"></progress>
+
+<span id="status">0%</span>
+
+</div>
+
+
+
+<script>
+
+let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
+
+scanner.addListener('scan', function (content) {
+
+window.AppInventor.setWebViewString("SCAN:" + content);
+
+});
+
+Instascan.Camera.getCameras().then(c => scanner.start(c[0]));
+
+
+
+function sendData() {
+
+window.AppInventor.setWebViewString("SEND");
+
 }
 
-// --- صفحة الإرسال ---
-class SendPage extends StatefulWidget {
-  const SendPage({super.key});
-  @override
-  State<SendPage> createState() => _SendPageState();
+
+
+// دالة يستدعيها كودولار لتحديث شريط التحميل
+
+function updateProgress(val) {
+
+document.getElementById('progressContainer').style.display = "block";
+
+document.getElementById('progressBar').value = val;
+
+document.getElementById('status').innerText = val + "%";
+
 }
 
-class _SendPageState extends State<SendPage> {
-  String? path;
-  double progress = 0.0;
-  bool isScanning = false;
+</script>
 
-  void pick() async {
-    await [Permission.storage, Permission.camera, Permission.location].request();
-    var result = await FilePicker.platform.pickFiles();
-    if (result != null) setState(() { path = result.files.single.path; isScanning = true; });
-  }
+</body>
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("ارسل ملف")),
-      body: path == null 
-        ? Center(child: ElevatedButton(onPressed: pick, child: const Text("اختر ملف أولاً")))
-        : isScanning 
-          ? MobileScanner(onDetect: (cap) => connect(cap.barcodes.first.rawValue!))
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("جاري النقل: ${(progress * 100).toStringAsFixed(0)}%"),
-                LinearProgressIndicator(value: progress),
-              ],
-            ),
-    );
-  }
+</html> 
 
-  void connect(String id) {
-    setState(() => isScanning = false);
-    Nearby().requestConnection("Sender", id,
-      onConnectionInitiated: (id, info) => Nearby().acceptConnection(id, onPayLoadRecieved: (id, p) {}),
-      onConnectionResult: (id, status) {
-        if (status == Status.CONNECTED) Nearby().sendPayload(Payload.forFile(File(path!)), id);
-      },
-      onDisconnected: (id) {},
-    );
-    Nearby().onPayloadTransferUpdate = (id, update) {
-      setState(() => progress = update.bytesTransferred / update.totalBytes);
-    };
-  }
-}
 
-// --- صفحة الاستقبال ---
-class ReceivePage extends StatefulWidget {
-  const ReceivePage({super.key});
-  @override
-  State<ReceivePage> createState() => _ReceivePageState();
-}
-
-class _ReceivePageState extends State<ReceivePage> {
-  String myId = "Device_${DateTime.now().millisecond}";
-  double progress = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    start();
-  }
-
-  void start() async {
-    await [Permission.location, Permission.nearbyWifiDevices].request();
-    Nearby().startAdvertising(myId, Strategy.P2P_STAR,
-      onConnectionInitiated: (id, info) => Nearby().acceptConnection(id, onPayLoadRecieved: (id, p) {}),
-      onConnectionResult: (id, status) {},
-      onDisconnected: (id) {},
-    );
-    Nearby().onPayloadTransferUpdate = (id, update) {
-      setState(() => progress = update.bytesTransferred / update.totalBytes);
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("استلام")),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            QrImageView(data: myId, size: 200),
-            const Text("امسح الكود للإرسال"),
-            const SizedBox(height: 20),
-            LinearProgressIndicator(value: progress),
-            Text("${(progress * 100).toStringAsFixed(0)}%"),
-          ],
-        ),
-      ),
-    );
-  }
-}
