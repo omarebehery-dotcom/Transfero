@@ -3,64 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner for Kodular</title>
-    <script src="https://cdn.jsdelivr.net/gh/schmich/instascan-builds@master/instascan.min.js"></script>
+    <title>QR Scanner - App Inventor</title>
+    
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+    
     <style>
-        /* تحسينات بسيطة للمظهر ليناسب شاشات الهواتف */
-        body { text-align: center; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
-        video { width: 100%; max-width: 400px; border-radius: 8px; background-color: #000; }
-        button { margin-top: 10px; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; }
-        #progressContainer { margin-top: 15px; }
-        progress { width: 80%; height: 20px; }
+        body { 
+            margin: 0; 
+            background: #000; 
+            color: #fff; 
+            text-align: center; 
+            padding: 20px; 
+            font-family: Arial, sans-serif;
+        }
+        .btn { 
+            width: 100%; 
+            padding: 20px; 
+            margin: 10px 0; 
+            border-radius: 15px; 
+            border: none; 
+            font-size: 20px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+        #video { 
+            width: 100%; 
+            border-radius: 15px; 
+            display: none; 
+            margin-top: 10px;
+        }
+        #progress { 
+            display: none; 
+            margin-top: 20px; 
+        }
     </style>
 </head>
 <body>
 
-    <video id="preview" autoplay playsinline></video>
-    <br>
-    <button onclick="sendData()">Send</button>
-    
-    <div id="progressContainer" style="display:none;">
-        <progress id="progressBar" value="0" max="100"></progress>
-        <span id="status">0%</span>
+    <button class="btn" style="background:#007bff" onclick="window.AppInventor.setWebViewString('SEND')">SEND</button>
+    <button class="btn" style="background:#28a745" onclick="startQR()">RECEIVE</button>
+
+    <video id="video" playsinline></video>
+
+    <div id="progress">
+        <progress id="bar" value="0" max="100" style="width:100%"></progress>
+        <span id="text">0%</span>
     </div>
 
     <script>
-        let scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
-        
-        scanner.addListener('scan', function (content) {
-            // التحقق من أن التطبيق يدعم WebViewString لتجنب الأخطاء أثناء التجربة على المتصفح
-            if (window.AppInventor && window.AppInventor.setWebViewString) {
-                window.AppInventor.setWebViewString("SCAN:" + content);
-            } else {
-                console.log("Scan Result: " + content);
-            }
-        });
+        // دالة تشغيل الكاميرا وقراءة الـ QR Code
+        function startQR() {
+            const videoElement = document.getElementById('video');
+            videoElement.style.display = 'block';
 
-        Instascan.Camera.getCameras().then(cameras => {
-            if (cameras.length > 0) {
-                // محاولة اختيار الكاميرا الخلفية إذا وجدت، وإلا يتم اختيار أول كاميرا متاحة
-                let backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back'));
-                scanner.start(backCamera || cameras[0]);
-            } else {
-                console.error('No cameras found.');
-            }
-        }).catch(e => console.error(e));
+            let s = new Instascan.Scanner({ video: videoElement });
 
-        function sendData() {
-            if (window.AppInventor && window.AppInventor.setWebViewString) {
-                window.AppInventor.setWebViewString("SEND");
-            } else {
-                console.log("Send button clicked");
-            }
+            // إرسال النتيجة إلى تطبيق App Inventor عند نجاح الفحص
+            s.addListener('scan', c => {
+                window.AppInventor.setWebViewString("RESULT:" + c);
+            });
+
+            // الحصول على الكاميرات المتاحة وتشغيل الكاميرا الخلفية (غالباً الكاميرا الأولى في الهواتف)
+            Instascan.Camera.getCameras()
+                .then(c => { 
+                    if (c.length > 0) {
+                        s.start(c[0]); 
+                    } else {
+                        alert("لم يتم العثور على كاميرات في الجهاز.");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("حدث خطأ أثناء محاولة تشغيل الكاميرا.");
+                });
         }
 
-        // الدالة التي يتم استدعاؤها من Kodular لتحديث شريط التحميل
-        function updateProgress(val) {
-            document.getElementById('progressContainer').style.display = "block";
-            document.getElementById('progressBar').value = val;
-            document.getElementById('status').innerText = val + "%";
+        // دالة تحديث شريط التقدم من خلال App Inventor
+        function updateProgress(v) {
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('bar').value = v;
+            document.getElementById('text').innerText = v + "%";
         }
     </script>
+
 </body>
 </html>
