@@ -6,36 +6,27 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-void main() => runApp(MaterialApp(
-  debugShowCheckedModeBanner: false,
-  theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
-  home: MainMenu(),
-));
+void main() => runApp(const MaterialApp(home: HomePage(), debugShowCheckedModeBanner: false));
 
-// --- الصفحة الرئيسية ---
-class MainMenu extends StatelessWidget {
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("ShareIt Clone"), centerTitle: true),
+      appBar: AppBar(title: const Text("ShareIt Clone")),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.share_arrival_time, size: 80, color: Colors.blue),
-            SizedBox(height: 50),
-            ElevatedButton.icon(
-              icon: Icon(Icons.send),
-              label: Text("إرسال ملف"),
-              style: ElevatedButton.styleFrom(minimumSize: Size(200, 60)),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => SendScreen())),
+            ElevatedButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SendPage())),
+              child: const Text("SEND (إرسال)"),
             ),
-            SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: Icon(Icons.call_received),
-              label: Text("استلام ملف"),
-              style: ElevatedButton.styleFrom(minimumSize: Size(200, 60), backgroundColor: Colors.green.shade100),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ReceiveScreen())),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceivePage())),
+              child: const Text("RECEIVE (استلام)"),
             ),
           ],
         ),
@@ -45,167 +36,100 @@ class MainMenu extends StatelessWidget {
 }
 
 // --- صفحة الإرسال ---
-class SendScreen extends StatefulWidget {
+class SendPage extends StatefulWidget {
+  const SendPage({super.key});
   @override
-  _SendScreenState createState() => _SendScreenState();
+  State<SendPage> createState() => _SendPageState();
 }
 
-class _SendScreenState extends State<SendScreen> {
-  String? selectedFilePath;
+class _SendPageState extends State<SendPage> {
+  String? path;
   double progress = 0.0;
-  bool connecting = false;
+  bool isScanning = false;
 
-  Future<void> selectFile() async {
-    // طلب صلاحيات الكاميرا والموقع والملفات
-    await [Permission.camera, Permission.location, Permission.storage, Permission.nearbyWifiDevices].request();
-    
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
-    if (result != null) {
-      setState(() => selectedFilePath = result.files.single.path);
-    }
+  void pick() async {
+    await [Permission.storage, Permission.camera, Permission.location].request();
+    var result = await FilePicker.platform.pickFiles();
+    if (result != null) setState(() { path = result.files.single.path; isScanning = true; });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("إرسال")),
-      body: Column(
-        children: [
-          if (selectedFilePath == null)
-            Expanded(child: Center(child: ElevatedButton(onPressed: selectFile, child: Text("اختر الملف أولاً"))))
-          else if (!connecting)
-            Expanded(
-              child: Stack(
-                children: [
-                  MobileScanner(
-                    onDetect: (capture) {
-                      final List<Barcode> barcodes = capture.barcodes;
-                      if (barcodes.isNotEmpty) {
-                        startConnection(barcodes.first.rawValue!);
-                      }
-                    },
-                  ),
-                  Center(child: Container(width: 250, height: 250, decoration: BoxDecoration(border: Border.all(color: Colors.white)))),
-                  Positioned(top: 20, left: 0, right: 0, child: Center(child: Text("امسح كود المستلم", style: TextStyle(color: Colors.white, fontSize: 18, backgroundColor: Colors.black45))))
-                ],
-              ),
-            )
-          else
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("جاري نقل الملف: ${selectedFilePath!.split('/').last}"),
-                      SizedBox(height: 20),
-                      LinearProgressIndicator(value: progress, minHeight: 10),
-                      SizedBox(height: 10),
-                      Text("${(progress * 100).toStringAsFixed(1)} %"),
-                    ],
-                  ),
-                ),
-              ),
+      appBar: AppBar(title: const Text("ارسل ملف")),
+      body: path == null 
+        ? Center(child: ElevatedButton(onPressed: pick, child: const Text("اختر ملف أولاً")))
+        : isScanning 
+          ? MobileScanner(onDetect: (cap) => connect(cap.barcodes.first.rawValue!))
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("جاري النقل: ${(progress * 100).toStringAsFixed(0)}%"),
+                LinearProgressIndicator(value: progress),
+              ],
             ),
-        ],
-      ),
     );
   }
 
-  void startConnection(String endpointId) async {
-    setState(() => connecting = true);
-    Nearby().requestConnection("SenderDevice", endpointId,
-      onConnectionInitiated: (id, info) => Nearby().acceptConnection(id, onPayLoadRecieved: (id, payload) {}),
+  void connect(String id) {
+    setState(() => isScanning = false);
+    Nearby().requestConnection("Sender", id,
+      onConnectionInitiated: (id, info) => Nearby().acceptConnection(id, onPayLoadRecieved: (id, p) {}),
       onConnectionResult: (id, status) {
-        if (status == Status.CONNECTED) {
-          Nearby().sendPayload(Payload.forFile(File(selectedFilePath!)), id);
-        }
+        if (status == Status.CONNECTED) Nearby().sendPayload(Payload.forFile(File(path!)), id);
       },
-      onDisconnected: (id) => setState(() => connecting = false),
+      onDisconnected: (id) {},
     );
-
     Nearby().onPayloadTransferUpdate = (id, update) {
-      if (update.status == PayloadStatus.IN_PROGRESS) {
-        setState(() => progress = (update.bytesTransferred / update.totalBytes));
-      } else if (update.status == PayloadStatus.SUCCESS) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("تم الإرسال!")));
-        Navigator.pop(context);
-      }
+      setState(() => progress = update.bytesTransferred / update.totalBytes);
     };
   }
 }
 
 // --- صفحة الاستقبال ---
-class ReceiveScreen extends StatefulWidget {
+class ReceivePage extends StatefulWidget {
+  const ReceivePage({super.key});
   @override
-  _ReceiveScreenState createState() => _ReceiveScreenState();
+  State<ReceivePage> createState() => _ReceivePageState();
 }
 
-class _ReceiveScreenState extends State<ReceiveScreen> {
-  String myId = "User_${DateTime.now().millisecond}";
+class _ReceivePageState extends State<ReceivePage> {
+  String myId = "Device_${DateTime.now().millisecond}";
   double progress = 0.0;
-  bool isReceiving = false;
 
   @override
   void initState() {
     super.initState();
-    startDiscovery();
+    start();
   }
 
-  void startDiscovery() async {
+  void start() async {
     await [Permission.location, Permission.nearbyWifiDevices].request();
     Nearby().startAdvertising(myId, Strategy.P2P_STAR,
-      onConnectionInitiated: (id, info) => Nearby().acceptConnection(id, onPayLoadRecieved: (id, payload) {
-        if (payload.type == PayloadType.FILE) setState(() => isReceiving = true);
-      }),
-      onConnectionResult: (id, status) => print(status),
-      onDisconnected: (id) => print("Disconnected"),
+      onConnectionInitiated: (id, info) => Nearby().acceptConnection(id, onPayLoadRecieved: (id, p) {}),
+      onConnectionResult: (id, status) {},
+      onDisconnected: (id) {},
     );
-
     Nearby().onPayloadTransferUpdate = (id, update) {
-      if (update.status == PayloadStatus.IN_PROGRESS) {
-        setState(() => progress = (update.bytesTransferred / update.totalBytes));
-      } else if (update.status == PayloadStatus.SUCCESS) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("استلمت الملف!")));
-        setState(() => isReceiving = false);
-      }
+      setState(() => progress = update.bytesTransferred / update.totalBytes);
     };
-  }
-
-  @override
-  void dispose() {
-    Nearby().stopAdvertising();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("استقبال")),
+      appBar: AppBar(title: const Text("استلام")),
       body: Center(
-        child: isReceiving 
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("جاري الاستلام..."),
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: LinearProgressIndicator(value: progress),
-                ),
-                Text("${(progress * 100).toStringAsFixed(1)} %")
-              ],
-            )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                QrImageView(data: myId, size: 250),
-                SizedBox(height: 20),
-                Text("خلّي المرسل يصور الكود"),
-                SizedBox(height: 20),
-                CircularProgressIndicator(),
-              ],
-            ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            QrImageView(data: myId, size: 200),
+            const Text("امسح الكود للإرسال"),
+            const SizedBox(height: 20),
+            LinearProgressIndicator(value: progress),
+            Text("${(progress * 100).toStringAsFixed(0)}%"),
+          ],
+        ),
       ),
     );
   }
