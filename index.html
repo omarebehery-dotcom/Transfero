@@ -12,47 +12,35 @@ body{
     margin:0;
     background:#0f172a;
     color:white;
-    font-family:Tahoma;
+    font-family:Tahoma,sans-serif;
 }
-
 .page{
     display:none;
     height:100vh;
     padding:20px;
     text-align:center;
 }
-
 .active{
     display:block;
 }
-
 h1{
-    margin-top:60px;
+    margin-top:50px;
 }
-
 .btn{
     width:90%;
     max-width:350px;
-    padding:18px;
+    padding:16px;
     border:none;
-    border-radius:20px;
-    color:white;
-    font-size:20px;
+    border-radius:18px;
     margin:15px auto;
     display:block;
+    color:white;
+    font-size:18px;
 }
-
-.sendBtn{
-    background:#2563eb;
-}
-
-.receiveBtn{
-    background:#16a34a;
-}
-
-.backBtn{
-    background:#374151;
-}
+.sendBtn{background:#2563eb;}
+.receiveBtn{background:#16a34a;}
+.files{background:#9333ea;}
+.backBtn{background:#374151;}
 
 input{
     width:90%;
@@ -60,21 +48,20 @@ input{
     padding:15px;
     border:none;
     border-radius:15px;
-    font-size:18px;
     text-align:center;
-    margin-top:20px;
+    font-size:18px;
 }
 
 #camera{
     width:90%;
     max-width:350px;
-    border-radius:20px;
     margin-top:20px;
+    border-radius:20px;
 }
 
 #qr{
-    width:230px;
-    height:230px;
+    width:220px;
+    height:220px;
     background:white;
     margin:30px auto;
     border-radius:20px;
@@ -84,13 +71,17 @@ input{
 #roomCode{
     font-size:30px;
     font-weight:bold;
+    margin-top:20px;
+}
+
+#selectedFiles{
+    margin-top:20px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- الصفحة الرئيسية -->
 <div id="home" class="page active">
     <h1>Transfero</h1>
 
@@ -105,7 +96,6 @@ input{
     </button>
 </div>
 
-<!-- صفحة الإرسال -->
 <div id="sendPage" class="page">
 
     <h1>Send Files</h1>
@@ -120,6 +110,18 @@ input{
         اتصال
     </button>
 
+    <input type="file"
+    id="fileInput"
+    multiple
+    hidden>
+
+    <button class="btn files"
+    onclick="pickFiles()">
+        📁 اختيار ملفات
+    </button>
+
+    <div id="selectedFiles"></div>
+
     <button class="btn backBtn"
     onclick="goHome()">
         رجوع
@@ -127,7 +129,6 @@ input{
 
 </div>
 
-<!-- صفحة الاستقبال -->
 <div id="receivePage" class="page">
 
     <h1>Receive Files</h1>
@@ -144,7 +145,7 @@ input{
 </div>
 
 <script>
-let scanner;
+let scanner=null;
 
 function hideAll(){
     document.querySelectorAll(".page")
@@ -163,19 +164,15 @@ function goHome(){
 
 function openSend(){
     hideAll();
-
     document.getElementById("sendPage")
     .classList.add("active");
-
     startCamera();
 }
 
 function openReceive(){
     hideAll();
-
     document.getElementById("receivePage")
     .classList.add("active");
-
     createRoom();
 }
 
@@ -264,9 +261,58 @@ function connectRoom(){
         );
     }
 }
+
+function pickFiles(){
+    document
+        .getElementById(
+            "fileInput"
+        )
+        .click();
+}
+
+document
+.getElementById("fileInput")
+.addEventListener(
+    "change",
+    function(){
+
+        let files =
+            this.files;
+
+        if(files.length===0)
+            return;
+
+        let names = [];
+
+        for(
+            let i = 0;
+            i < files.length;
+            i++
+        ){
+            names.push(
+                files[i].name
+            );
+        }
+
+        document
+        .getElementById(
+            "selectedFiles"
+        )
+        .innerHTML =
+        "الملفات المختارة:<br>"
+        + names.join("<br>");
+
+        if(window.AppInventor){
+            window.AppInventor
+            .setWebViewString(
+                "FILES:"
+                + names.join("|")
+            );
+        }
+    }
+);
 </script>
 
 </body>
 </html>
 ```
-
