@@ -1,10 +1,12 @@
-```html
 <!DOCTYPE html>
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Transfero</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/instascan/1.0.0/instascan.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 *{
@@ -20,7 +22,6 @@ body{
     color:white;
 }
 
-/* الصفحات */
 .page{
     display:none;
     min-height:100vh;
@@ -31,7 +32,6 @@ body{
     display:block;
 }
 
-/* الرئيسية */
 .logo{
     text-align:center;
     font-size:40px;
@@ -91,17 +91,9 @@ input{
     cursor:pointer;
 }
 
-.blue{
-    background:#2563eb;
-}
-
-.gray{
-    background:#475569;
-}
-
-.purple{
-    background:#9333ea;
-}
+.blue{background:#2563eb;}
+.gray{background:#475569;}
+.purple{background:#9333ea;}
 
 #camera{
     width:100%;
@@ -109,6 +101,7 @@ input{
     background:#ddd;
     border-radius:20px;
     margin-top:20px;
+    object-fit:cover;
 }
 
 #qr{
@@ -133,7 +126,6 @@ input{
 
 <body>
 
-<!-- الرئيسية -->
 <div id="home" class="page active">
 
     <div class="logo">
@@ -152,15 +144,13 @@ input{
 
 </div>
 
-<!-- صفحة الإرسال -->
 <div id="sendPage" class="page">
 
     <div class="card">
 
         <h2>Send Files</h2>
 
-        <div id="camera">
-        </div>
+        <video id="camera" playsinline></video>
 
         <input
         id="roomInput"
@@ -194,20 +184,15 @@ input{
 
 </div>
 
-<!-- صفحة الاستقبال -->
 <div id="receivePage" class="page">
 
     <div class="card">
 
         <h2>Receive Files</h2>
 
-        <div id="roomCode">
-            483921
-        </div>
+        <div id="roomCode"></div>
 
-        <div id="qr">
-            QR CODE
-        </div>
+        <div id="qr"></div>
 
         <button
         class="btn gray"
@@ -220,6 +205,8 @@ input{
 </div>
 
 <script>
+let scanner = null;
+
 function hideAll(){
     document
     .querySelectorAll('.page')
@@ -228,11 +215,57 @@ function hideAll(){
     );
 }
 
+function startCamera(){
+
+    let video =
+        document.getElementById('camera');
+
+    if(scanner){
+        scanner.stop();
+    }
+
+    scanner =
+        new Instascan.Scanner({
+            video: video,
+            mirror:false
+        });
+
+    scanner.addListener(
+        'scan',
+        function(content){
+
+            document
+            .getElementById(
+                'roomInput'
+            ).value = content;
+        }
+    );
+
+    Instascan.Camera
+    .getCameras()
+    .then(function(cameras){
+
+        if(cameras.length > 0){
+            scanner.start(
+                cameras[cameras.length - 1]
+            );
+        }else{
+            alert('لا توجد كاميرا');
+        }
+    })
+    .catch(function(e){
+        console.log(e);
+    });
+}
+
 function openSend(){
     hideAll();
+
     document
     .getElementById('sendPage')
     .classList.add('active');
+
+    startCamera();
 }
 
 function openReceive(){
@@ -242,24 +275,42 @@ function openReceive(){
     .getElementById('receivePage')
     .classList.add('active');
 
+    let code =
+        Math.floor(
+            100000 +
+            Math.random()*900000
+        );
+
     document
     .getElementById('roomCode')
-    .innerHTML =
-    Math.floor(
-        100000+
-        Math.random()*900000
-    );
+    .innerHTML = code;
+
+    let qr =
+        document
+        .getElementById('qr');
+
+    qr.innerHTML = '';
+
+    new QRCode(qr,{
+        text:String(code),
+        width:220,
+        height:220
+    });
 }
 
 function goHome(){
+
     hideAll();
 
     document
     .getElementById('home')
     .classList.add('active');
+
+    if(scanner){
+        scanner.stop();
+    }
 }
 </script>
 
 </body>
 </html>
-```
