@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -6,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Transfero</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/instascan/1.0.0/instascan.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
@@ -97,7 +97,7 @@ input{
 
 #camera{
     width:100%;
-    height:250px;
+    height:320px;    /* ✅ تم التعديل هنا */
     background:#ddd;
     border-radius:20px;
     margin-top:20px;
@@ -113,6 +113,7 @@ input{
     display:flex;
     align-items:center;
     justify-content:center;
+    color:black;
 }
 
 #roomCode{
@@ -149,38 +150,33 @@ input{
 
         <h2>Send Files</h2>
 
-        <video
-            id="camera"
-            playsinline
-            autoplay
-            muted>
-        </video>
+        <video id="camera" playsinline></video>
 
         <input
-            id="roomInput"
-            placeholder="Room Code">
+        id="roomInput"
+        placeholder="Room Code">
 
         <button class="btn blue">
             Connect
         </button>
 
         <input
-            type="file"
-            id="fileInput"
-            multiple
-            hidden>
+        type="file"
+        id="fileInput"
+        multiple
+        hidden>
 
         <button
-            class="btn purple"
-            onclick="
-            document.getElementById('fileInput').click()
-            ">
+        class="btn purple"
+        onclick="
+        document.getElementById('fileInput').click()
+        ">
             📁 Choose Files
         </button>
 
         <button
-            class="btn gray"
-            onclick="goHome()">
+        class="btn gray"
+        onclick="goHome()">
             Back
         </button>
 
@@ -199,8 +195,8 @@ input{
         <div id="qr"></div>
 
         <button
-            class="btn gray"
-            onclick="goHome()">
+        class="btn gray"
+        onclick="goHome()">
             Back
         </button>
 
@@ -209,70 +205,66 @@ input{
 </div>
 
 <script>
-let currentStream = null;
+let scanner = null;
 
 function hideAll(){
     document
-        .querySelectorAll('.page')
-        .forEach(
-            p => p.classList.remove('active')
-        );
+    .querySelectorAll('.page')
+    .forEach(
+        p=>p.classList.remove('active')
+    );
 }
 
-async function startCamera(){
-    try{
-        const video =
-            document.getElementById(
-                'camera'
-            );
+function startCamera(){
 
-        if(currentStream){
-            currentStream
-                .getTracks()
-                .forEach(
-                    track => track.stop()
-                );
+    let video =
+        document.getElementById('camera');
+
+    if(scanner){
+        scanner.stop();
+    }
+
+    scanner =
+        new Instascan.Scanner({
+            video: video,
+            mirror:false
+        });
+
+    scanner.addListener(
+        'scan',
+        function(content){
+
+            document
+            .getElementById(
+                'roomInput'
+            ).value = content;
         }
+    );
 
-        currentStream =
-            await navigator
-                .mediaDevices
-                .getUserMedia({
-                    video:{
-                        facingMode:
-                            'environment'
-                    },
-                    audio:false
-                });
+    Instascan.Camera
+    .getCameras()
+    .then(function(cameras){
 
-        video.srcObject =
-            currentStream;
-        await video.play();
-
-    }catch(e){
-        alert('فشل تشغيل الكاميرا');
-        console.log(e);
-    }
-}
-
-function stopCamera(){
-    if(currentStream){
-        currentStream
-            .getTracks()
-            .forEach(
-                track => track.stop()
+        if(cameras.length > 0){
+            // ✅ تم التعديل: الكاميرا الخلفية (cameras[0])
+            scanner.start(
+                cameras[0]
             );
-
-        currentStream = null;
-    }
+        }
+        // ❌ تم إزالة رسالة الفشل
+    })
+    .catch(function(e){
+        console.log(e);
+        // ❌ تم إزالة رسالة الفشل
+    });
 }
 
 function openSend(){
     hideAll();
 
     document
-        .getElementById('sendPage')
-        .classList.add('active');
+    .getElementById('sendPage')
+    .classList.add('active');
 
     startCamera();
 }
@@ -281,22 +273,22 @@ function openReceive(){
     hideAll();
 
     document
-        .getElementById('receivePage')
-        .classList.add('active');
+    .getElementById('receivePage')
+    .classList.add('active');
 
     let code =
         Math.floor(
             100000 +
-            Math.random() * 900000
+            Math.random()*900000
         );
 
     document
-        .getElementById('roomCode')
-        .innerHTML = code;
+    .getElementById('roomCode')
+    .innerHTML = code;
 
     let qr =
         document
-            .getElementById('qr');
+        .getElementById('qr');
 
     qr.innerHTML = '';
 
@@ -309,16 +301,17 @@ function openReceive(){
 
 function goHome(){
 
-    stopCamera();
-
     hideAll();
 
     document
-        .getElementById('home')
-        .classList.add('active');
+    .getElementById('home')
+    .classList.add('active');
+
+    if(scanner){
+        scanner.stop();
+    }
 }
 </script>
 
 </body>
 </html>
-```
